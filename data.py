@@ -6,11 +6,6 @@ import torchvision
 import random
 import math
 from itertools import combinations
-from nltk.corpus import reuters
-from nltk.corpus import stopwords
-from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-import nltk
 
 
 class TempDataset(Dataset):
