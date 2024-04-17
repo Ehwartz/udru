@@ -118,14 +118,19 @@ def vec2attacker_input(model, xyi, loss=utils.ce_loss):
     return torch.concat(retl, dim=0).view(n, -1)
 
 
-def main(partial=False):
+def main(data_type='SL'):
     batch_size = 64
     if torch.cuda.is_available():
         device = torch.device('cuda:0')
     else:
         device = torch.device('cpu')
     model = MLP(features=[784, 1024, 512, 256, 10], bias=False, activ=nn.ReLU)
-    if partial:
+    if data_type == 'SL':
+        model.load_state_dict(torch.load('../weights/MNIST/m0.pth'))
+        member_set = data.MNIST(root='../dataset', flatten=True, train=True)
+        non_member_set = data.MNIST(root='../dataset', flatten=True, train=False)
+
+    if data_type == 'PLL':
         model.load_state_dict(torch.load('../weights/MNIST/mnist_partial.pth'))
         member_set = data.PartialLabelSet(dataset=data.MNIST(root='../datasets', train=True, flatten=True),
                                           partial_rate=0.2,
@@ -133,10 +138,14 @@ def main(partial=False):
         non_member_set = data.PartialLabelSet(dataset=data.MNIST(root='../datasets', train=False, flatten=True),
                                               partial_rate=0.2,
                                               targets_root='../weights/partial_targets_valid.pth')
-    else:
-        model.load_state_dict(torch.load('../weights/MNIST/m0.pth'))
-        member_set = data.MNIST(root='../dataset', flatten=True, train=True)
-        non_member_set = data.MNIST(root='../dataset', flatten=True, train=False)
+    if data_type == 'NLL':
+        model.load_state_dict(torch.load('../weights/MNIST/mnist_partial.pth'))
+        member_set = data.NoisyLabelSet(dataset=data.MNIST(root='../datasets', train=True, flatten=True),
+                                        noisy_rate=0.2,
+                                        targets_root='../weights/partial_targets_train.pth')
+        non_member_set = data.NoisyLabelSet(dataset=data.MNIST(root='../datasets', train=False, flatten=True),
+                                            noisy_rate=0.2,
+                                            targets_root='../weights/partial_targets_valid.pth')
 
     attack_train_set = generate_attack_set(model, member_set, non_member_set)
 
@@ -152,12 +161,3 @@ def main(partial=False):
                    save_path='../weights/attacker.pth',
                    loss=utils.ce_loss)
 
-
-if __name__ == '__main__':
-    model = MLP(features=[784, 1024, 512, 256, 10], bias=False, activ=nn.ReLU)
-    model.load_state_dict(torch.load('../weights/MNIST/m0.pth', map_location=torch.device('cpu')))
-    member_set = data.MNIST(root='../dataset', flatten=True, train=True)
-    non_member_set = data.MNIST(root='../dataset', flatten=True, train=False)
-    dataset = generate_attack_set(model, member_set, non_member_set)
-    print(dataset.data)
-    print(dataset.data.size())
